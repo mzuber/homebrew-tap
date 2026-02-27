@@ -1,8 +1,8 @@
 class Nnn < Formula
   desc "n³ The unorthodox terminal file manager"
   homepage "https://github.com/jarun/nnn"
-  url "https://github.com/jarun/nnn/archive/refs/tags/v5.1.tar.gz"
-  sha256 "9faaff1e3f5a2fd3ed570a83f6fb3baf0bfc6ebd6a9abac16203d057ac3fffe3"
+  url "https://github.com/jarun/nnn/archive/refs/tags/v5.2.tar.gz"
+  sha256 "f166eda5093ac8dcf8cbbc6224123a32c53cf37b82c5c1cb48e2e23352754030"
   license "BSD-2-Clause"
   head "https://github.com/jarun/nnn.git", branch: "master"
 
@@ -11,8 +11,6 @@ class Nnn < Formula
   option "with-icons-in-terminal-icons", "Compile with support for icons-in-terminal icons"
   option "with-pcre", "Compile with PCRE support (replaces default POSIX regex)"
   option "with-qsort", "Compile with support for Alexey Tourbin's QSORT"
-  option "with-8-contexts", "Compile with support for eight contexts"
-  option "with-matching-filters-only", "Compile with support for matching filters only (discard filter key when there's no match)"
   option "with-load-directories-unsorted", "Compile with support for loading directories unsorted (usable with xterm 256 colors only)"
 
   option "without-readline", "Compile without readline support"
@@ -27,7 +25,7 @@ class Nnn < Formula
   depends_on "gnu-sed"
   depends_on "ncurses"
   depends_on "readline" => :recommended
-  depends_on "pcre" => :optional
+  depends_on "pcre2" => :optional
 
   def install
     args = []
@@ -39,13 +37,9 @@ class Nnn < Formula
     elsif build.with? "icons-in-terminal-icons"
       args.append("O_ICONS=1")
     elsif build.with? "pcre"
-      args.append("O_PCRE=1")
+      args.append("O_PCRE2=1")
     elsif build.with? "qsort"
       args.append("O_QSORT=1")
-    elsif build.with? "8-contexts"
-      args.append("O_CTX8=1")
-    elsif build.with? "matching-filters-only"
-      args.append("O_MATCHFLTR=1")
     elsif build.with? "load-directories-unsorted"
       args.append("O_NOSORT=1")
     elsif build.without? "readline"
@@ -78,9 +72,15 @@ class Nnn < Formula
     require "pty"
 
     (testpath/"testdir").mkdir
-    PTY.spawn(bin/"nnn", testpath/"testdir") do |r, w, _pid|
+    PTY.spawn(bin/"nnn", testpath/"testdir") do |r, w, pid|
       w.write "q"
-      assert_match "~/testdir", r.read
+      output = if OS.mac?
+        r.read
+      else
+        Process.wait(pid)
+        r.read_nonblock(4096)
+      end
+      assert_match "~/testdir", output
     end
   end
 end
